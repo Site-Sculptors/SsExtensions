@@ -13,7 +13,7 @@ namespace SsRefactor
     {
         public const int CommandId = 0x0100;
 
-        public static readonly Guid CommandSet = new Guid("YOUR-GUID-HERE");
+        public static readonly Guid CommandSet = new Guid("4E923D07-D7C1-4133-B05E-6AD24116262B");
 
         private readonly AsyncPackage package;
 
@@ -22,7 +22,7 @@ namespace SsRefactor
             this.package = package;
 
             var menuCommandID = new CommandID(CommandSet, CommandId);
-            var menuItem = new MenuCommand(this.Execute, menuCommandID);
+            var menuItem = new OleMenuCommand(this.Execute, menuCommandID);
             commandService?.AddCommand(menuItem);
         }
 

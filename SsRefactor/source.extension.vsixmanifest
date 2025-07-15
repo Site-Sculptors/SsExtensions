@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
   <Metadata>
-    <Identity Id="SsRefactor.0b51968b-daba-40c3-8e1d-324eee5b76f0" Version="1.0" Language="en-US" Publisher="Billy" />
-    <DisplayName>SsRefactor</DisplayName>
-    <Description>Empty VSIX Project.</Description>
+    <Identity Id="SsRefactor" Version="1.0" Language="en-US" Publisher="Site Sculptors" />
+    <DisplayName>SS Refactor</DisplayName>
+    <Description>
+      <h3>Converts C# properties to CommunityToolkit.Mvvm [ObservableProperty] fields via context menu.</h3>
+      <h5>Can be used with both Auto and Full Properties</h5>
+    </Description>
+    <Icon>Resources\Images\icon.png</Icon>
+    <MoreInfoUrl>https://github.com/BillyMartin1964/SsExtensions</MoreInfoUrl>
   </Metadata>
   <Installation>
-    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">
-      <ProductArchitecture>amd64</ProductArchitecture>
-    </InstallationTarget>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)" />
   </Installation>
   <Dependencies>
-    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" Version="[4.5,)" />
   </Dependencies>
   <Prerequisites>
     <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.0,18.0)" DisplayName="Visual Studio core editor" />
   </Prerequisites>
-  <Assets>
-    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
-  </Assets>
 </PackageManifest>
