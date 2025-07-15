@@ -1,7 +1,5 @@
 # SS Refactor
-
-![SS Refactor Icon](SsRefactor/Resources/Images/icon.png)
-
+<img src="SsRefactor/Resources/Images/icon.png" width="32" height="32" />
 ## Overview
 
 **SS Refactor** is a Visual Studio extension that converts C# properties to CommunityToolkit.Mvvm `[ObservableProperty]` fields via the context menu. It works with both auto-properties and full properties.
