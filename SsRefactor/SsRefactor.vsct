@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable">
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+  <Commands package="guidSsRefactorPackage">
+    <Groups>
+      <Group guid="guidSsRefactorCmdSet" id="MyMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
+      </Group>
+    </Groups>
+    <Buttons>
+      <Button guid="guidSsRefactorCmdSet" id="ConvertToObservablePropertyCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidSsRefactorCmdSet" id="MyMenuGroup" />
+        <Icon guid="guidImages" id="bmpPic1" />
+        <Strings>
+          <ButtonText>Convert to ObservableProperty</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+    <Bitmaps>
+      <Bitmap guid="guidImages" href="Resources\Images_32bit.bmp" usedList="bmpPic1" />
+    </Bitmaps>
+  </Commands>
+  <Symbols>
+    <GuidSymbol name="guidSsRefactorPackage" value="{57f36045-bc66-4e6a-80e5-aad2d64d52d6}" />
+    <GuidSymbol name="guidSsRefactorCmdSet" value="{4E923D07-D7C1-4133-B05E-6AD24116262B}" />
+    <IDSymbol name="MyMenuGroup" value="0x1020" />
+    <IDSymbol name="ConvertToObservablePropertyCommandId" value="0x0100" />
+    <GuidSymbol name="guidImages" value="{B5A7A2B2-2B6A-4B6B-8B2A-2B6A4B6B8B2A}" />
+    <IDSymbol name="bmpPic1" value="1" />
+  </Symbols>
+</CommandTable>

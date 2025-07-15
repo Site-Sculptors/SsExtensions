@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SsRefactor", "SsRefactor\SsRefactor.csproj", "{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|arm64 = Debug|arm64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|arm64 = Release|arm64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Debug|arm64.ActiveCfg = Debug|arm64
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Debug|arm64.Build.0 = Debug|arm64
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Debug|x86.ActiveCfg = Debug|x86
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Debug|x86.Build.0 = Debug|x86
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Release|arm64.ActiveCfg = Release|arm64
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Release|arm64.Build.0 = Release|arm64
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Release|x86.ActiveCfg = Release|x86
+		{770EF633-1BED-4EA2-AC4D-9C33C7C64EBB}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C330C3EA-54BB-47B5-B752-61CE2135F902}
+	EndGlobalSection
+EndGlobal
