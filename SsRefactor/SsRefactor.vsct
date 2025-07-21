@@ -18,6 +18,13 @@
           <ButtonText>Convert to ObservableProperty</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidSsRefactorCmdSet" id="ConvertToRelayCommandCommandId" priority="0x0110" type="Button">
+        <Parent guid="guidSsRefactorCmdSet" id="MyMenuGroup" />
+        <Icon guid="guidImages" id="bmpPic1" />
+        <Strings>
+          <ButtonText>Convert to RelayCommand</ButtonText>
+        </Strings>
+      </Button>
     </Buttons>
     
     <Bitmaps>
@@ -31,6 +38,7 @@
     <GuidSymbol name="guidSsRefactorCmdSet" value="{4E923D07-D7C1-4133-B05E-6AD24116262B}">
       <IDSymbol name="MyMenuGroup" value="0x1020" />
       <IDSymbol name="ConvertToObservablePropertyCommandId" value="0x0100" />
+      <IDSymbol name="ConvertToRelayCommandCommandId" value="0x0110" />
     </GuidSymbol>
     
     <GuidSymbol name="guidImages" value="{8cac6a3a-52a6-4bf0-a88b-a8812c187ab2}">

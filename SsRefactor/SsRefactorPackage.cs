@@ -50,6 +50,7 @@ namespace SsRefactor
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             await ConvertToObservablePropertyCommand.InitializeAsync(this);
+            await ConvertToRelayCommandCommand.InitializeAsync(this);
         }
 
         #endregion
