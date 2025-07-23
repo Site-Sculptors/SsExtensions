@@ -68,9 +68,9 @@ namespace SsRefactor
 
         private bool IsRelayCommandCandidate(string selectedText)
         {
-            // Looks for a private ICommand field and a public property returning Command<T> or Command
-            return Regex.IsMatch(selectedText, @"private\s+ICommand\s+[_\w]+;.*public\s+ICommand\s+\w+\s*=>\s*[_\w]+\s*\?\?=\s*new\s+Command<.*?>", RegexOptions.Singleline)
-                || Regex.IsMatch(selectedText, @"private\s+ICommand\s+[_\w]+;.*public\s+ICommand\s+\w+\s*=>\s*[_\w]+\s*\?\?=\s*new\s+Command\s*\(", RegexOptions.Singleline);
+            // Enable for any code containing new AsyncRelayCommand, new RelayCommand, or new Command (generic or not)
+            return Regex.IsMatch(selectedText, @"new\s+(Async)?RelayCommand(\s*<.*?>)?\s*\(", RegexOptions.Singleline)
+                || Regex.IsMatch(selectedText, @"new\s+Command(\s*<.*?>)?\s*\(", RegexOptions.Singleline);
         }
 
         private async void Execute(object sender, EventArgs e)
@@ -111,16 +111,38 @@ namespace SsRefactor
 
         private string TryConvertToRelayCommand(string selectedText)
         {
-            // Replace 'new Command<T>' or 'new Command' with 'new RelayCommand<T>' or 'new RelayCommand'
-            string pattern = @"new\s+Command(<.*?>)?";
-            string replacement = "new RelayCommand$1";
-            string result = Regex.Replace(selectedText, pattern, replacement);
+            string result = selectedText;
 
-            // Convert method group to lambda: new RelayCommand(SomeMethod) => new RelayCommand(() => SomeMethod())
-            // Only if not already a lambda or async lambda
+            // Replace 'new Command<T>' or 'new Command' with 'new RelayCommand<T>' or 'new RelayCommand'
+            result = Regex.Replace(result, @"new\s+Command(<.*?>)?", "new RelayCommand$1");
+
+            // Convert method group to lambda for RelayCommand and AsyncRelayCommand
+            // Handles: new RelayCommand(TestMethod) => new RelayCommand(() => TestMethod())
+            // Handles: new AsyncRelayCommand(TestMethod) => new AsyncRelayCommand(async () => await TestMethod())
             result = Regex.Replace(result,
-                @"new\s+RelayCommand(.*?)\((\s*)([A-Za-z_][A-Za-z0-9_]*)\s*\)(?!\s*=>)",
-                m => $"new RelayCommand{m.Groups[1].Value}(() => {m.Groups[3].Value}())");
+                @"new\s+(Async)?RelayCommand(.*?)\((\s*)([A-Za-z_][A-Za-z0-9_]*)\s*\)(?!\s*=>)",
+                m =>
+                {
+                    var asyncPrefix = m.Groups[1].Value;
+                    var generic = m.Groups[2].Value;
+                    var method = m.Groups[4].Value;
+                    if (!string.IsNullOrEmpty(asyncPrefix))
+                        return $"new AsyncRelayCommand{generic}(async () => await {method}())";
+                    else
+                        return $"new RelayCommand{generic}(() => {method}())";
+                });
+
+            // Convert lambda with missing parameter parentheses for AsyncRelayCommand
+            // Handles: new AsyncRelayCommand<object>(async => TestMethod()) => new AsyncRelayCommand<object>(async () => TestMethod())
+            result = Regex.Replace(result,
+                @"new\s+AsyncRelayCommand(<.*?>)?\(\s*async\s*=>",
+                m => $"new AsyncRelayCommand{m.Groups[1].Value}(async () =>");
+
+            // Convert async lambda with parameter to async lambda with parameter (no change, but ensures consistency)
+            // Handles: new AsyncRelayCommand<object>(async (parameter) => { })
+            result = Regex.Replace(result,
+                @"new\s+AsyncRelayCommand(<.*?>)?\(\s*async\s*\((.*?)\)\s*=>",
+                m => $"new AsyncRelayCommand{m.Groups[1].Value}(async ({m.Groups[2].Value}) =>");
 
             return result != selectedText ? result : null;
         }
