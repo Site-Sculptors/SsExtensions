@@ -127,12 +127,19 @@ namespace SsRefactor
         {
             var matches = GetPropertyMatches(selectedText);
             var fields = new List<string>();
+            var seen = new HashSet<string>(); // To track unique property signatures
+
             foreach (var match in matches)
             {
                 if (match != null && match.Groups.Count >= 4)
                 {
                     var type = match.Groups[2].Value;
                     var name = match.Groups[3].Value;
+                    var key = type + "|" + name;
+                    if (seen.Contains(key))
+                        continue; // Skip duplicates
+
+                    seen.Add(key);
                     var field = "_" + char.ToLowerInvariant(name[0]) + name.Substring(1);
                     fields.Add("[ObservableProperty]" + Environment.NewLine + "private " + type + " " + field + ";");
                 }
