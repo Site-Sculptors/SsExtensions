@@ -45,8 +45,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ConvertToAutoPropertyCommand.cs" />
+    <Compile Include="ConvertToAutoPropertyMenuCommand.cs" />
+    <Compile Include="ConvertToFullPropertyCommand.cs" />
+    <Compile Include="ConvertToFullPropertyMenuCommand.cs" />
     <Compile Include="ConvertToObservablePropertyCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PropertyRegexHelper.cs" />
     <Compile Include="SsRefactorPackage.cs" />
   </ItemGroup>
   <ItemGroup>
