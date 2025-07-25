@@ -221,6 +221,7 @@ namespace SsRefactor
                 // Loop through all property blocks and convert each
                 var blocks = PropertyRegexHelper.ExtractPropertyBlocks(selectedText);
                 var convertedFields = new List<string>();
+                var skippedProperties = new List<string>();
                 foreach (var block in blocks)
                 {
                     var propInfo = PropertyRegexHelper.MatchProperty(block);
@@ -238,6 +239,11 @@ namespace SsRefactor
                         var indentedOutput = string.Join("\n", output.Split('\n')).Replace("\n", "\n" + indent);
                         convertedFields.Add(indent + indentedOutput);
                     }
+                    else
+                    {
+                        // Add to skipped list for warning
+                        skippedProperties.Add(block);
+                    }
                 }
                 string finalOutput = string.Join("\n\n", convertedFields);
                 if (!string.IsNullOrWhiteSpace(finalOutput))
@@ -245,7 +251,17 @@ namespace SsRefactor
                     sel.Delete();
                     sel.Insert(finalOutput);
                 }
-                else
+                if (skippedProperties.Count > 0)
+                {
+                    VsShellUtilities.ShowMessageBox(
+                        this.package,
+                        $"Some properties could not be converted to [ObservableProperty] fields. Please review them manually.\n\nSkipped properties:\n{string.Join("\n---\n", skippedProperties)}",
+                        "SsRefactor",
+                        OLEMSGICON.OLEMSGICON_WARNING,
+                        OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                }
+                else if (string.IsNullOrWhiteSpace(finalOutput))
                 {
                     VsShellUtilities.ShowMessageBox(
                         this.package,
