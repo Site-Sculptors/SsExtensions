@@ -97,14 +97,17 @@ namespace SsRefactor
                         sb.AppendLine($"    get => {field};");
                         sb.AppendLine($"    set => SetProperty(ref {field}, value);");
                         sb.AppendLine("}");
-                        convertedFields.Add(sb.ToString());
+                        var output = sb.ToString().TrimEnd('\r', '\n');
+                        var indent = PropertyRegexHelper.GetLeadingWhitespace(block);
+                        var indentedOutput = string.Join("\n", output.Split('\n')).Replace("\n", "\n" + indent);
+                        convertedFields.Add(indent + indentedOutput);
                     }
                 }
-                string output = string.Join("\n\n", convertedFields);
-                if (!string.IsNullOrWhiteSpace(output))
+                string finalOutput = string.Join("\n\n", convertedFields);
+                if (!string.IsNullOrWhiteSpace(finalOutput))
                 {
                     sel.Delete();
-                    sel.Insert(output);
+                    sel.Insert(finalOutput);
                 }
                 else
                 {

@@ -33,6 +33,12 @@ namespace SsRefactor
             return blocks;
         }
 
+        public static string GetLeadingWhitespace(string text)
+        {
+            var match = Regex.Match(text, @"^(\s*)");
+            return match.Success ? match.Groups[1].Value : string.Empty;
+        }
+
         public static PropertyInfo MatchProperty(string text)
         {
             // 1. Observable property

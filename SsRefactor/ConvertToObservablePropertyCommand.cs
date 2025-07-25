@@ -123,15 +123,17 @@ namespace SsRefactor
                         {
                             attributes.Add($"[NotifyPropertyChangedFor(nameof({dep}))]");
                         }
-                        convertedFields.Add(string.Join("\n", attributes) + "\nprivate " + propInfo.Type + " " + fieldName + ";");
+                        var output = string.Join("\n", attributes) + "\nprivate " + propInfo.Type + " " + fieldName + ";";
+                        var indent = PropertyRegexHelper.GetLeadingWhitespace(block);
+                        var indentedOutput = string.Join("\n", output.Split('\n')).Replace("\n", "\n" + indent);
+                        convertedFields.Add(indent + indentedOutput);
                     }
                 }
-
-                string output = string.Join("\n\n", convertedFields);
-                if (!string.IsNullOrWhiteSpace(output))
+                string finalOutput = string.Join("\n\n", convertedFields);
+                if (!string.IsNullOrWhiteSpace(finalOutput))
                 {
                     sel.Delete();
-                    sel.Insert(output);
+                    sel.Insert(finalOutput);
                 }
                 else
                 {

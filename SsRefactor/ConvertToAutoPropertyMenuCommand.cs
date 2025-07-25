@@ -86,14 +86,16 @@ namespace SsRefactor
                     var propInfo = PropertyRegexHelper.MatchProperty(block);
                     if (propInfo != null && propInfo.NoMatchReason == null)
                     {
-                        convertedFields.Add($"public {propInfo.Type} {propInfo.PropertyName} {{ get; set; }}");
+                        var output = $"public {propInfo.Type} {propInfo.PropertyName} {{ get; set; }}";
+                        var indent = PropertyRegexHelper.GetLeadingWhitespace(block);
+                        convertedFields.Add(indent + output);
                     }
                 }
-                string output = string.Join("\n\n", convertedFields);
-                if (!string.IsNullOrWhiteSpace(output))
+                string finalOutput = string.Join("\n\n", convertedFields);
+                if (!string.IsNullOrWhiteSpace(finalOutput))
                 {
                     sel.Delete();
-                    sel.Insert(output);
+                    sel.Insert(finalOutput);
                 }
                 else
                 {
