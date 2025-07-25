@@ -33,6 +33,12 @@ namespace SsRefactor
             return blocks;
         }
 
+        public static string GetLeadingWhitespace(string text)
+        {
+            var match = Regex.Match(text, @"^(\s*)");
+            return match.Success ? match.Groups[1].Value : string.Empty;
+        }
+
         public static PropertyInfo MatchProperty(string text)
         {
             // 1. Observable property
@@ -69,21 +75,44 @@ namespace SsRefactor
         // Matches full property blocks (with or without backing field)
         private static PropertyInfo MatchFullPropertyBlock(string text)
         {
-            // Full property with backing field (field + property, SetProperty)
+            // 1. Full property with explicit backing field (field + property, SetProperty)
             var backingFieldMatch = Regex.Match(text,
-                @"([a-zA-Z0-9_<>,\[\]\.]+)\s+([a-zA-Z0-9_]+)\s*=.*;\s*public\s+\1\s+([a-zA-Z0-9_]+)\s*\{[^}]*get\s*\{\s*return\s+\2;\s*\}[^}]*set\s*\{([^}]*)\}\s*\}",
+                @"([a-zA-Z0-9_<>,\[\]\.]+)\s+([a-zA-Z0-9_]+)\s*=.*;\s*public\s+\1\s+([a-zA-Z0-9_]+)\s*\{[^}]*get\s*\{\s*return\s+([a-zA-Z0-9_]+);\s*\}[^}]*set\s*\{([^}]*)\}\s*\}",
                 RegexOptions.Singleline);
             if (backingFieldMatch.Success)
             {
                 var type = backingFieldMatch.Groups[1].Value;
-                var field = backingFieldMatch.Groups[2].Value;
+                var field = backingFieldMatch.Groups[4].Value; // Use the field from the getter
                 var propertyName = backingFieldMatch.Groups[3].Value;
-                var setterBody = backingFieldMatch.Groups[4].Value;
+                var setterBody = backingFieldMatch.Groups[5].Value;
                 var dependentProperties = ExtractDependentProperties(setterBody, propertyName);
                 return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "FullWithBacking", DependentProperties = dependentProperties };
             }
 
-            // Full property (get/set blocks)
+            // 2. Prism-style property: get { return myVar; } set { myVar = value; RaisePropertyChanged(); }
+            var prismMatch = Regex.Match(text,
+                @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{\s*get\s*\{\s*return\s+([\w_]+);\s*\}\s*set\s*\{\s*\4\s*=\s*value;\s*RaisePropertyChanged\s*\(\s*\)\s*;?\s*\}\s*\}",
+                RegexOptions.Singleline);
+            if (prismMatch.Success)
+            {
+                var type = prismMatch.Groups[2].Value;
+                var propertyName = prismMatch.Groups[3].Value;
+                var field = prismMatch.Groups[4].Value;
+                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "PrismFullWithBacking" };
+            }
+
+            // 3. Expression-bodied get/set (e.g. get => isBusy; set => SetProperty(ref isBusy, value);)
+            var exprMatch = Regex.Match(text, @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{\s*get\s*=>\s*([\w_]+);\s*set\s*=>\s*SetProperty\(ref\s+([\w_]+),\s*value\);\s*\}", RegexOptions.Singleline);
+            if (exprMatch.Success)
+            {
+                var type = exprMatch.Groups[2].Value;
+                var propertyName = exprMatch.Groups[3].Value;
+                var field = exprMatch.Groups[4].Value;
+                var dependentProperties = new List<string>();
+                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "FullWithBacking", DependentProperties = dependentProperties };
+            }
+
+            // 4. General full property (fallback, no backing field extraction)
             var fullMatch = Regex.Match(text, @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{[^}]*get[^}]*;?[^}]*set\s*\{([^}]*)\}[^}]*\}", RegexOptions.Singleline);
             if (fullMatch.Success)
             {

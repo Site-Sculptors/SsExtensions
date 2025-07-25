@@ -8,6 +8,8 @@ using Microsoft.VisualStudio.Shell.Interop;
 using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 using System.Text.RegularExpressions;
+using VSLangProj;
+using System.Windows.Forms;
 
 namespace SsRefactor
 {
@@ -88,7 +90,100 @@ namespace SsRefactor
                     return;
                 string selectedText = sel.Text.Trim();
 
-                // Detect if containing class is not partial
+                // 1. Check for CommunityToolkit.Mvvm reference
+                var project = dte.ActiveDocument?.ProjectItem?.ContainingProject;
+                if (project != null && !ProjectHasMvvmToolkitReference(project))
+                {
+                    var result = VsShellUtilities.ShowMessageBox(
+                        this.package,
+                        "This project does not reference CommunityToolkit.Mvvm. Would you like to add it now?",
+                        "SsRefactor",
+                        OLEMSGICON.OLEMSGICON_WARNING,
+                        OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
+                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                    if (result == 6) // Yes
+                    {
+                        try
+                        {
+                            dte.ExecuteCommand("View.PackageManagerConsole");
+                            dte.ExecuteCommand("NuGetPackageManagerConsole", "Install-Package CommunityToolkit.Mvvm");
+                        }
+                        catch
+                        {
+                            var openNuget = VsShellUtilities.ShowMessageBox(
+                                this.package,
+                                "Could not launch NuGet Package Manager Console. Please install CommunityToolkit.Mvvm manually.\n\nWould you like to open the NuGet Package Manager for this project now?",
+                                "SsRefactor",
+                                OLEMSGICON.OLEMSGICON_WARNING,
+                                OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
+                                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                            if (openNuget == 6) // Yes
+                            {
+                                try
+                                {
+                                    System.Windows.Forms.Clipboard.SetText("CommunityToolkit.Mvvm");
+                                    dte.ExecuteCommand("Project.ManageNuGetPackages");
+                                    VsShellUtilities.ShowMessageBox(
+                                        this.package,
+                                        "The NuGet Package Manager is now open. Switch to the 'Browse' tab and paste (Ctrl+V) 'CommunityToolkit.Mvvm' into the search bar. The package name has been copied to your clipboard.",
+                                        "SsRefactor",
+                                        OLEMSGICON.OLEMSGICON_INFO,
+                                        OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                                }
+                                catch
+                                {
+                                    // If this fails, do nothing further
+                                }
+                            }
+                            return;
+                        }
+                        // After attempting install, re-check reference
+                        if (!ProjectHasMvvmToolkitReference(project))
+                        {
+                            var openNuget2 = VsShellUtilities.ShowMessageBox(
+                                this.package,
+                                "CommunityToolkit.Mvvm could not be added automatically. Please install it manually before converting to [ObservableProperty].\n\nWould you like to open the NuGet Package Manager for this project now?",
+                                "SsRefactor",
+                                OLEMSGICON.OLEMSGICON_WARNING,
+                                OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
+                                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                            if (openNuget2 == 6) // Yes
+                            {
+                                try
+                                {
+                                    System.Windows.Forms.Clipboard.SetText("CommunityToolkit.Mvvm");
+                                    dte.ExecuteCommand("Project.ManageNuGetPackages");
+                                    VsShellUtilities.ShowMessageBox(
+                                        this.package,
+                                        "The NuGet Package Manager is now open. Switch to the 'Browse' tab and paste (Ctrl+V) 'CommunityToolkit.Mvvm' into the search bar. The package name has been copied to your clipboard.",
+                                        "SsRefactor",
+                                        OLEMSGICON.OLEMSGICON_INFO,
+                                        OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                                }
+                                catch
+                                {
+                                    // If this fails, do nothing further
+                                }
+                            }
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        VsShellUtilities.ShowMessageBox(
+                            this.package,
+                            "CommunityToolkit.Mvvm must be installed before you can convert to [ObservableProperty].",
+                            "SsRefactor",
+                            OLEMSGICON.OLEMSGICON_WARNING,
+                            OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                            OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                        return;
+                    }
+                }
+
+                // 2. Detect if containing class is not partial
                 var classText = GetContainingClassText(textDoc, sel);
                 if (classText != null && !IsPartialClass(classText))
                 {
@@ -109,31 +204,64 @@ namespace SsRefactor
                     }
                 }
 
+                // Ensure using statement for CommunityToolkit.Mvvm.ComponentModel exists
+                var doc = dte.ActiveDocument;
+                var textDocObj = doc?.Object("TextDocument") as TextDocument;
+                EditPoint docStart = textDocObj?.StartPoint.CreateEditPoint();
+                EditPoint docEnd = textDocObj?.EndPoint.CreateEditPoint();
+                string docText = docStart?.GetText(docEnd) ?? string.Empty;
+                string usingStatement = "using CommunityToolkit.Mvvm.ComponentModel;";
+                if (!docText.Contains(usingStatement))
+                {
+                    // Always insert at the very top
+                    EditPoint insertPoint = textDocObj.StartPoint.CreateEditPoint();
+                    insertPoint.Insert(usingStatement + "\n");
+                }
+
                 // Loop through all property blocks and convert each
                 var blocks = PropertyRegexHelper.ExtractPropertyBlocks(selectedText);
                 var convertedFields = new List<string>();
+                var skippedProperties = new List<string>();
                 foreach (var block in blocks)
                 {
                     var propInfo = PropertyRegexHelper.MatchProperty(block);
                     if (propInfo != null && propInfo.NoMatchReason == null)
                     {
-                        var fieldName = propInfo.FieldName ?? ("_" + char.ToLowerInvariant(propInfo.PropertyName[0]) + propInfo.PropertyName.Substring(1));
+                        // Always use underscore prefix for field name
+                        var fieldName = "_" + char.ToLowerInvariant(propInfo.PropertyName[0]) + propInfo.PropertyName.Substring(1);
                         var attributes = new List<string> { "[ObservableProperty]" };
                         foreach (var dep in propInfo.DependentProperties)
                         {
                             attributes.Add($"[NotifyPropertyChangedFor(nameof({dep}))]");
                         }
-                        convertedFields.Add(string.Join("\n", attributes) + "\nprivate " + propInfo.Type + " " + fieldName + ";");
+                        var output = string.Join("\n", attributes) + "\nprivate " + propInfo.Type + " " + fieldName + ";";
+                        var indent = PropertyRegexHelper.GetLeadingWhitespace(block);
+                        var indentedOutput = string.Join("\n", output.Split('\n')).Replace("\n", "\n" + indent);
+                        convertedFields.Add(indent + indentedOutput);
+                    }
+                    else
+                    {
+                        // Add to skipped list for warning
+                        skippedProperties.Add(block);
                     }
                 }
-
-                string output = string.Join("\n\n", convertedFields);
-                if (!string.IsNullOrWhiteSpace(output))
+                string finalOutput = string.Join("\n\n", convertedFields);
+                if (!string.IsNullOrWhiteSpace(finalOutput))
                 {
                     sel.Delete();
-                    sel.Insert(output);
+                    sel.Insert(finalOutput);
                 }
-                else
+                if (skippedProperties.Count > 0)
+                {
+                    VsShellUtilities.ShowMessageBox(
+                        this.package,
+                        $"Some properties could not be converted to [ObservableProperty] fields. Please review them manually.\n\nSkipped properties:\n{string.Join("\n---\n", skippedProperties)}",
+                        "SsRefactor",
+                        OLEMSGICON.OLEMSGICON_WARNING,
+                        OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                }
+                else if (string.IsNullOrWhiteSpace(finalOutput))
                 {
                     VsShellUtilities.ShowMessageBox(
                         this.package,
@@ -196,6 +324,21 @@ namespace SsRefactor
                     break;
                 }
             }
+        }
+
+        // Helper: Check if project has CommunityToolkit.Mvvm reference
+        private bool ProjectHasMvvmToolkitReference(EnvDTE.Project project)
+        {
+            var vsProject = project.Object as VSProject;
+            if (vsProject != null)
+            {
+                foreach (Reference reference in vsProject.References)
+                {
+                    if (reference.Name == "CommunityToolkit.Mvvm")
+                        return true;
+                }
+            }
+            return false;
         }
     }
 }
