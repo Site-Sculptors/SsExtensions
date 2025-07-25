@@ -5,9 +5,9 @@ using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
+using System.Text.RegularExpressions;
 
 namespace SsRefactor
 {
@@ -70,20 +70,8 @@ namespace SsRefactor
         // Returns true if at least one property is found in the selection
         private bool HasAnyProperty(string selectedText)
         {
-            return GetPropertyMatches(selectedText).Count > 0;
-        }
-
-        // Finds all property matches (auto and full) in the selected text
-        private List<Match> GetPropertyMatches(string selectedText)
-        {
-            var matches = new List<Match>();
-            // Auto-properties
-            var autoProps = Regex.Matches(selectedText, @"(public|private|protected|internal)\s+([\w<>\[\]\.]+)\s+([\w_]+)\s*\{\s*get;.*set;.*\}", RegexOptions.Singleline);
-            foreach (Match m in autoProps) matches.Add(m);
-            // Full properties with get/set blocks
-            var fullProps = Regex.Matches(selectedText, @"(public|private|protected|internal)\s+([\w<>\[\]\.]+)\s+([\w_]+)\s*\{[^}]*get[^}]*;?[^}]*set[^}]*;?[^}]*\}", RegexOptions.Singleline);
-            foreach (Match m in fullProps) matches.Add(m);
-            return matches;
+            // Use PropertyRegexHelper to check for any property
+            return PropertyRegexHelper.MatchProperty(selectedText) != null;
         }
 
         private async void Execute(object sender, EventArgs e)
@@ -99,7 +87,47 @@ namespace SsRefactor
                 if (sel == null)
                     return;
                 string selectedText = sel.Text.Trim();
-                string output = ConvertAllPropertiesToObservableFields(selectedText);
+
+                // Detect if containing class is not partial
+                var classText = GetContainingClassText(textDoc, sel);
+                if (classText != null && !IsPartialClass(classText))
+                {
+                    var result = VsShellUtilities.ShowMessageBox(
+                        this.package,
+                        "The class must be declared as partial to use [ObservableProperty]. Would you like to make it partial?",
+                        "SsRefactor",
+                        OLEMSGICON.OLEMSGICON_WARNING,
+                        OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
+                        OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+                    if (result == 6) // Yes
+                    {
+                        MakeClassPartial(textDoc, classText);
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+
+                // Loop through all property blocks and convert each
+                var blocks = PropertyRegexHelper.ExtractPropertyBlocks(selectedText);
+                var convertedFields = new List<string>();
+                foreach (var block in blocks)
+                {
+                    var propInfo = PropertyRegexHelper.MatchProperty(block);
+                    if (propInfo != null && propInfo.NoMatchReason == null)
+                    {
+                        var fieldName = propInfo.FieldName ?? ("_" + char.ToLowerInvariant(propInfo.PropertyName[0]) + propInfo.PropertyName.Substring(1));
+                        var attributes = new List<string> { "[ObservableProperty]" };
+                        foreach (var dep in propInfo.DependentProperties)
+                        {
+                            attributes.Add($"[NotifyPropertyChangedFor(nameof({dep}))]");
+                        }
+                        convertedFields.Add(string.Join("\n", attributes) + "\nprivate " + propInfo.Type + " " + fieldName + ";");
+                    }
+                }
+
+                string output = string.Join("\n\n", convertedFields);
                 if (!string.IsNullOrWhiteSpace(output))
                 {
                     sel.Delete();
@@ -122,29 +150,52 @@ namespace SsRefactor
             }
         }
 
-        // Converts all detected properties in the selection to ObservableProperty fields
-        private string ConvertAllPropertiesToObservableFields(string selectedText)
+        // Helper: Get the text of the containing class
+        private string GetContainingClassText(TextDocument textDoc, TextSelection sel)
         {
-            var matches = GetPropertyMatches(selectedText);
-            var fields = new List<string>();
-            var seen = new HashSet<string>(); // To track unique property signatures
-
-            foreach (var match in matches)
+            var point = sel.ActivePoint;
+            var editPoint = textDoc.CreateEditPoint();
+            editPoint.MoveToPoint(point);
+            // Search backwards for class declaration
+            string classText = null;
+            int linesToCheck = 50; // Reasonable limit
+            for (int i = 0; i < linesToCheck && editPoint.Line > 1; i++)
             {
-                if (match != null && match.Groups.Count >= 4)
+                editPoint.LineUp();
+                var lineText = editPoint.GetLines(editPoint.Line, editPoint.Line + 1);
+                if (Regex.IsMatch(lineText, @"class\s+[a-zA-Z0-9_]+"))
                 {
-                    var type = match.Groups[2].Value;
-                    var name = match.Groups[3].Value;
-                    var key = type + "|" + name;
-                    if (seen.Contains(key))
-                        continue; // Skip duplicates
-
-                    seen.Add(key);
-                    var field = "_" + char.ToLowerInvariant(name[0]) + name.Substring(1);
-                    fields.Add("[ObservableProperty]" + Environment.NewLine + "private " + type + " " + field + ";");
+                    classText = lineText;
+                    break;
                 }
             }
-            return string.Join(Environment.NewLine + Environment.NewLine, fields);
+            return classText;
+        }
+
+        // Helper: Check if class is partial
+        private bool IsPartialClass(string classText)
+        {
+            return Regex.IsMatch(classText, @"partial\s+class");
+        }
+
+        // Helper: Make class partial
+        private void MakeClassPartial(TextDocument textDoc, string classText)
+        {
+            var editPoint = textDoc.StartPoint.CreateEditPoint();
+            int totalLines = textDoc.EndPoint.Line;
+            for (int i = 1; i <= totalLines; i++)
+            {
+                var lineText = editPoint.GetLines(i, i + 1);
+                if (lineText.Contains(classText.Trim()))
+                {
+                    var newText = Regex.Replace(lineText, @"class", "partial class");
+                    var replacePoint = textDoc.CreateEditPoint();
+                    replacePoint.MoveToLineAndOffset(i, 1);
+                    replacePoint.Delete(lineText.Length);
+                    replacePoint.Insert(newText);
+                    break;
+                }
+            }
         }
     }
 }
