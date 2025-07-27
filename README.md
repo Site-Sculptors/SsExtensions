@@ -1,5 +1,5 @@
 # SS Refactor
-<img src="SsRefactor/Resources/Images/Banner.jpg" height="32" />
+<img src="SsRefactor/Resources/Images/icon.png" height="32" />
 
 ## Overview
 
@@ -7,9 +7,7 @@
 
 ## Features
 - **Convert to ObservableProperty:** Converts auto-properties, full properties (block-bodied, expression-bodied, SetProperty, Prism-style, etc.) to `[ObservableProperty]` fields.
-- 
 - **Convert to AutoProperty:** Converts full properties and observable fields to auto-properties (`{ get; set; }`).
-- 
 - **Convert to FullProperty:** Converts auto-properties and observable fields to full MVVM properties using a backing field and `SetProperty` pattern.
 - Context menu integration for quick access.
 - Robust property detection for adjacent and variably formatted properties.
@@ -85,6 +83,19 @@ public string Name
 ## Requirements
 - Visual Studio 2022 (v17.0 or later)
 - .NET Framework 4.7.2 or later
+
+## Installation
+
+- Download and install the VSIX from the Visual Studio Marketplace or [GitHub Releases](https://github.com/Site-Sculptors/SsExtensions/releases).
+- After installation, the extension should appear in the Extensions list with the SS Refactor icon. If the icon does not appear, see troubleshooting below.
+
+## Troubleshooting: Missing Extension Icon
+
+If the extension works but the icon is missing in the Extensions list or instructions:
+- Ensure the icon file (`icon.png`) exists in `SsRefactor/Resources/Images/` and is referenced in the manifest.
+- Try restarting Visual Studio.
+- If the icon is still missing, uninstall and reinstall the extension.
+- For more help, see [Report Issues](https://github.com/Site-Sculptors/SsExtensions/issues).
 
 ## Release Notes
 

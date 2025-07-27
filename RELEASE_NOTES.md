@@ -1,5 +1,9 @@
 # SS Refactor Release Notes
 
+## v1.1.1
+- Maintenance and documentation updates.
+- Improved icon and installation troubleshooting guidance.
+
 ## v1.1.0
 - Improved property detection: supports auto-properties, full properties (block-bodied, expression-bodied, SetProperty, Prism-style, etc.).
 - Converts Prism-style properties (RaisePropertyChanged) and most MVVM patterns.
