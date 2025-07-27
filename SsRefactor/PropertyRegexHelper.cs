@@ -101,6 +101,18 @@ namespace SsRefactor
                 return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "PrismFullWithBacking" };
             }
 
+            // 2b. INotifyPropertyChanged pattern: set { field = value; OnPropertyChanged(); }
+            var notifyMatch = Regex.Match(text,
+                @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{\s*get\s*\{\s*return\s+([\w_]+);\s*\}\s*set\s*\{\s*\4\s*=\s*value;\s*OnPropertyChanged\s*\(\s*\)\s*;?\s*\}\s*\}",
+                RegexOptions.Singleline);
+            if (notifyMatch.Success)
+            {
+                var type = notifyMatch.Groups[2].Value;
+                var propertyName = notifyMatch.Groups[3].Value;
+                var field = notifyMatch.Groups[4].Value;
+                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "NotifyFullWithBacking" };
+            }
+
             // 3. Expression-bodied get/set (e.g. get => isBusy; set => SetProperty(ref isBusy, value);)
             var exprMatch = Regex.Match(text, @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{\s*get\s*=>\s*([\w_]+);\s*set\s*=>\s*SetProperty\(ref\s+([\w_]+),\s*value\);\s*\}", RegexOptions.Singleline);
             if (exprMatch.Success)
