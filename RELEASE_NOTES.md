@@ -1,5 +1,10 @@
 # SS Refactor Release Notes
 
+## v1.1.2
+- Added support for Prism-style and SetProperty properties with nullable types (e.g., bool?, int?, etc.).
+- All property detection patterns now support nullable types.
+- Internal refactoring for improved pattern matching and conversion reliability.
+
 ## v1.1.1
 - Maintenance and documentation updates.
 - Improved icon and installation troubleshooting guidance.

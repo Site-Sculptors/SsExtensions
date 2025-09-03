@@ -21,7 +21,7 @@
 ## Getting Started
 
 1. **Install the Extension**
-   - Download and install the VSIX from the [Releases](https://github.com/Site-Sculptors/SsExtensions/releases) page or from the Visual Studio Marketplace.
+   - Download and install the VSIX from the [Releases page](https://github.com/Site-Sculptors/SsExtensions/releases) or from the Visual Studio Marketplace.
 2. **Open Your C# Project** in Visual Studio 2022 (v17.0 or later).
 3. **Highlight** one or more properties in your C# code (auto, full, or Prism-style).
 4. **Right-click** to open the context menu.
@@ -86,7 +86,7 @@ public string Name
 
 ## Installation
 
-- Download and install the VSIX from the Visual Studio Marketplace or [GitHub Releases](https://github.com/Site-Sculptors/SsExtensions/releases).
+- Download and install the VSIX from the Visual Studio Marketplace or [GitHub Releases](https://github.com/Site-Sculptors/SsExtensions/releases)
 - After installation, the extension should appear in the Extensions list with the SS Refactor icon. If the icon does not appear, see troubleshooting below.
 
 ## Troubleshooting: Missing Extension Icon

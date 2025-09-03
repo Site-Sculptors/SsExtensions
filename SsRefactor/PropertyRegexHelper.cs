@@ -42,7 +42,7 @@ namespace SsRefactor
         public static PropertyInfo MatchProperty(string text)
         {
             // 1. Observable property
-            var obsMatch = Regex.Match(text, @"\[ObservableProperty\]\s*private\s+([\w<>,\[\]\.]+)\s+_([\w_]+);", RegexOptions.Singleline);
+            var obsMatch = Regex.Match(text, @"\[ObservableProperty\]\s*private\s+([\w<>,\[\]\.\?]+)\s+_([\w_]+);", RegexOptions.Singleline);
             if (obsMatch.Success)
             {
                 var type = obsMatch.Groups[1].Value;
@@ -52,7 +52,7 @@ namespace SsRefactor
             }
 
             // 2. Auto-property
-            var autoMatch = Regex.Match(text, @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{\s*get;\s*set;\s*\}", RegexOptions.Singleline);
+            var autoMatch = Regex.Match(text, "(public|private|protected|internal)\\s+([\\w<>,\\[\\]\\.\\?]+)\\s+([\\w_]+)\\s*\\{\\s*get;\\s*set;\\s*\\}", RegexOptions.Singleline);
             if (autoMatch.Success)
             {
                 var type = autoMatch.Groups[2].Value;
@@ -77,7 +77,7 @@ namespace SsRefactor
         {
             // 1. Full property with explicit backing field (field + property, SetProperty)
             var backingFieldMatch = Regex.Match(text,
-                @"([a-zA-Z0-9_<>,\[\]\.]+)\s+([a-zA-Z0-9_]+)\s*=.*;\s*public\s+\1\s+([a-zA-Z0-9_]+)\s*\{[^}]*get\s*\{\s*return\s+([a-zA-Z0-9_]+);\s*\}[^}]*set\s*\{([^}]*)\}\s*\}",
+                @"([a-zA-Z0-9_<>,\[\]\.\?]+)\s+([a-zA-Z0-9_]+)\s*=.*;\s*public\s+\1\s+([a-zA-Z0-9_]+)\s*\{[^}]*get\s*\{\s*return\s+([a-zA-Z0-9_]+);\s*\}[^}]*set\s*\{([^}]*)\}\s*\}",
                 RegexOptions.Singleline);
             if (backingFieldMatch.Success)
             {
@@ -91,7 +91,7 @@ namespace SsRefactor
 
             // 2. Prism-style property: get { return myVar; } set { myVar = value; RaisePropertyChanged(); }
             var prismMatch = Regex.Match(text,
-                @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{\s*get\s*\{\s*return\s+([\w_]+);\s*\}\s*set\s*\{\s*\4\s*=\s*value;\s*RaisePropertyChanged\s*\(\s*\)\s*;?\s*\}\s*\}",
+                @"(public|private|protected|internal)\s+([\w<>,\[\]\.\?]+)\s+([\w_]+)\s*\{\s*get\s*\{\s*return\s+([\w_]+);\s*\}\s*set\s*\{\s*\4\s*=\s*value;\s*RaisePropertyChanged\s*\(\s*\)\s*;?\s*\}\s*\}",
                 RegexOptions.Singleline);
             if (prismMatch.Success)
             {
@@ -103,7 +103,7 @@ namespace SsRefactor
 
             // 2b. INotifyPropertyChanged pattern: set { field = value; OnPropertyChanged(); }
             var notifyMatch = Regex.Match(text,
-                @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{\s*get\s*\{\s*return\s+([\w_]+);\s*\}\s*set\s*\{\s*\4\s*=\s*value;\s*OnPropertyChanged\s*\(\s*\)\s*;?\s*\}\s*\}",
+                @"(public|private|protected|internal)\s+([\w<>,\[\]\.\?]+)\s+([\w_]+)\s*\{\s*get\s*\{\s*return\s+([\w_]+);\s*\}\s*set\s*\{\s*\4\s*=\s*value;\s*OnPropertyChanged\s*\(\s*\)\s*;?\s*\}\s*\}",
                 RegexOptions.Singleline);
             if (notifyMatch.Success)
             {
@@ -114,7 +114,7 @@ namespace SsRefactor
             }
 
             // 3. Expression-bodied get/set (e.g. get => isBusy; set => SetProperty(ref isBusy, value);)
-            var exprMatch = Regex.Match(text, @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{\s*get\s*=>\s*([\w_]+);\s*set\s*=>\s*SetProperty\(ref\s+([\w_]+),\s*value\);\s*\}", RegexOptions.Singleline);
+            var exprMatch = Regex.Match(text, "(public|private|protected|internal)\\s+([\\w<>,\\[\\]\\.\\?]+)\\s+([\\w_]+)\\s*\\{\\s*get\\s*=>\\s*([\\w_]+);\\s*set\\s*=>\\s*SetProperty\\(ref\\s+([\\w_]+),\\s*value\\);\\s*\\}", RegexOptions.Singleline);
             if (exprMatch.Success)
             {
                 var type = exprMatch.Groups[2].Value;
@@ -125,7 +125,7 @@ namespace SsRefactor
             }
 
             // 4. General full property (fallback, no backing field extraction)
-            var fullMatch = Regex.Match(text, @"(public|private|protected|internal)\s+([\w<>,\[\]\.]+)\s+([\w_]+)\s*\{[^}]*get[^}]*;?[^}]*set\s*\{([^}]*)\}[^}]*\}", RegexOptions.Singleline);
+            var fullMatch = Regex.Match(text, "(public|private|protected|internal)\\s+([\\w<>,\\[\\]\\.\\?]+)\\s+([\\w_]+)\\s*\\{[^}]*get[^}]*;?[^}]*set\\s*\\{([^}]*)\\}[^}]*\\}", RegexOptions.Singleline);
             if (fullMatch.Success)
             {
                 var type = fullMatch.Groups[2].Value;
