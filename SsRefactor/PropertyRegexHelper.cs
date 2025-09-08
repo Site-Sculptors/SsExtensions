@@ -12,7 +12,18 @@ namespace SsRefactor
             public string PropertyName { get; set; }
             public string Kind { get; set; } // Observable, Auto, FullWithBacking, Full
             public List<string> DependentProperties { get; set; } = new List<string>();
+            public string InitialValue { get; set; } // Added to store initial value
             public string NoMatchReason { get; set; }
+        }
+
+        // Helper to remove comments from code
+        private static string RemoveComments(string text)
+        {
+            // Remove single-line comments
+            text = Regex.Replace(text, @"//.*", "");
+            // Remove multi-line comments
+            text = Regex.Replace(text, @"/\*.*?\*/", "", RegexOptions.Singleline);
+            return text;
         }
 
         public static List<string> ExtractPropertyBlocks(string text)
@@ -24,11 +35,8 @@ namespace SsRefactor
             {
                 var trimmed = candidate.Trim();
                 if (string.IsNullOrWhiteSpace(trimmed)) continue;
-                // Check if this candidate matches any property pattern
-                if (MatchProperty(trimmed)?.NoMatchReason == null)
-                {
-                    blocks.Add(trimmed);
-                }
+                // Always add every non-empty block for processing
+                blocks.Add(trimmed);
             }
             return blocks;
         }
@@ -41,8 +49,10 @@ namespace SsRefactor
 
         public static PropertyInfo MatchProperty(string text)
         {
+            // Remove comments before matching
+            var noComments = RemoveComments(text);
             // 1. Observable property
-            var obsMatch = Regex.Match(text, @"\[ObservableProperty\]\s*private\s+([\w<>,\[\]\.\?]+)\s+_([\w_]+);", RegexOptions.Singleline);
+            var obsMatch = Regex.Match(noComments, @"\[ObservableProperty\]\s*private\s+([\w<>,\[\]\.\?]+)\s+_([\w_]+);", RegexOptions.Singleline);
             if (obsMatch.Success)
             {
                 var type = obsMatch.Groups[1].Value;
@@ -52,7 +62,7 @@ namespace SsRefactor
             }
 
             // 2. Auto-property
-            var autoMatch = Regex.Match(text, "(public|private|protected|internal)\\s+([\\w<>,\\[\\]\\.\\?]+)\\s+([\\w_]+)\\s*\\{\\s*get;\\s*set;\\s*\\}", RegexOptions.Singleline);
+            var autoMatch = Regex.Match(noComments, "(public|private|protected|internal)\\s+([\\w<>,\\[\\]\\.\\?]+)\\s+([\\w_]+)\\s*\\{\\s*get;\\s*set;\\s*\\}", RegexOptions.Singleline);
             if (autoMatch.Success)
             {
                 var type = autoMatch.Groups[2].Value;
@@ -61,9 +71,9 @@ namespace SsRefactor
             }
 
             // If not observable or auto, and is multi-line, try full property block matching
-            if (text.Contains("\n") || text.Contains("\r"))
+            if (noComments.Contains("\n") || noComments.Contains("\r"))
             {
-                var fullProp = MatchFullPropertyBlock(text);
+                var fullProp = MatchFullPropertyBlock(noComments, text);
                 if (fullProp != null)
                     return fullProp;
             }
@@ -73,23 +83,37 @@ namespace SsRefactor
         }
 
         // Matches full property blocks (with or without backing field)
-        private static PropertyInfo MatchFullPropertyBlock(string text)
+        private static PropertyInfo MatchFullPropertyBlock(string text, string originalText)
         {
             // 1. Full property with explicit backing field (field + property, SetProperty)
+            // Match with or without initial value
             var backingFieldMatch = Regex.Match(text,
-                @"([a-zA-Z0-9_<>,\[\]\.\?]+)\s+([a-zA-Z0-9_]+)\s*=.*;\s*public\s+\1\s+([a-zA-Z0-9_]+)\s*\{[^}]*get\s*\{\s*return\s+([a-zA-Z0-9_]+);\s*\}[^}]*set\s*\{([^}]*)\}\s*\}",
+                @"([a-zA-Z0-9_<>,\[\]\.\?]+)\s+([a-zA-Z0-9_]+)(\s*=\s*(.*?))?;\s*public\s+\1\s+([a-zA-Z0-9_]+)\s*\{[^}]*get\s*\{\s*return\s+([a-zA-Z0-9_]+);\s*\}[^}]*set\s*\{([^}]*)\}\s*\}",
                 RegexOptions.Singleline);
             if (backingFieldMatch.Success)
             {
                 var type = backingFieldMatch.Groups[1].Value;
-                var field = backingFieldMatch.Groups[4].Value; // Use the field from the getter
-                var propertyName = backingFieldMatch.Groups[3].Value;
-                var setterBody = backingFieldMatch.Groups[5].Value;
+                var field = backingFieldMatch.Groups[6].Value; // Use the field from the getter
+                var propertyName = backingFieldMatch.Groups[5].Value;
+                var initialValue = backingFieldMatch.Groups[4].Success ? backingFieldMatch.Groups[4].Value.Trim() : null;
+                var setterBody = backingFieldMatch.Groups[7].Value;
                 var dependentProperties = ExtractDependentProperties(setterBody, propertyName);
-                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "FullWithBacking", DependentProperties = dependentProperties };
+                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "FullWithBacking", DependentProperties = dependentProperties, InitialValue = initialValue };
             }
 
-            // 2. Prism-style property: get { return myVar; } set { myVar = value; RaisePropertyChanged(); }
+            // 2. Expression-bodied get/set (e.g. get => isBusy; set => SetProperty(ref isBusy, value);)
+            var exprMatch = Regex.Match(text, "(public|private|protected|internal)\\s+([\\w<>,\\[\\]\\.\\?]+)\\s+([\\w_]+)\\s*\\{\\s*get\\s*=>\\s*([\\w_]+);\\s*set\\s*=>\\s*SetProperty\\(ref\\s+([\\w_]+),\\s*value\\);\\s*\\}", RegexOptions.Singleline);
+            if (exprMatch.Success)
+            {
+                var type = exprMatch.Groups[2].Value;
+                var propertyName = exprMatch.Groups[3].Value;
+                var field = exprMatch.Groups[4].Value;
+                var initialValue = ExtractInitialValueFromField(originalText, field);
+                var dependentProperties = new List<string>();
+                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "FullWithBacking", DependentProperties = dependentProperties, InitialValue = initialValue };
+            }
+
+            // 3. Prism-style property: get { return myVar; } set { myVar = value; RaisePropertyChanged(); }
             var prismMatch = Regex.Match(text,
                 @"(public|private|protected|internal)\s+([\w<>,\[\]\.\?]+)\s+([\w_]+)\s*\{\s*get\s*\{\s*return\s+([\w_]+);\s*\}\s*set\s*\{\s*\4\s*=\s*value;\s*RaisePropertyChanged\s*\(\s*\)\s*;?\s*\}\s*\}",
                 RegexOptions.Singleline);
@@ -98,10 +122,11 @@ namespace SsRefactor
                 var type = prismMatch.Groups[2].Value;
                 var propertyName = prismMatch.Groups[3].Value;
                 var field = prismMatch.Groups[4].Value;
-                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "PrismFullWithBacking" };
+                var initialValue = ExtractInitialValueFromField(originalText, field);
+                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "PrismFullWithBacking", InitialValue = initialValue };
             }
 
-            // 2b. INotifyPropertyChanged pattern: set { field = value; OnPropertyChanged(); }
+            // 4. INotifyPropertyChanged pattern: set { field = value; OnPropertyChanged(); }
             var notifyMatch = Regex.Match(text,
                 @"(public|private|protected|internal)\s+([\w<>,\[\]\.\?]+)\s+([\w_]+)\s*\{\s*get\s*\{\s*return\s+([\w_]+);\s*\}\s*set\s*\{\s*\4\s*=\s*value;\s*OnPropertyChanged\s*\(\s*\)\s*;?\s*\}\s*\}",
                 RegexOptions.Singleline);
@@ -110,21 +135,11 @@ namespace SsRefactor
                 var type = notifyMatch.Groups[2].Value;
                 var propertyName = notifyMatch.Groups[3].Value;
                 var field = notifyMatch.Groups[4].Value;
-                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "NotifyFullWithBacking" };
+                var initialValue = ExtractInitialValueFromField(originalText, field);
+                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "NotifyFullWithBacking", InitialValue = initialValue };
             }
 
-            // 3. Expression-bodied get/set (e.g. get => isBusy; set => SetProperty(ref isBusy, value);)
-            var exprMatch = Regex.Match(text, "(public|private|protected|internal)\\s+([\\w<>,\\[\\]\\.\\?]+)\\s+([\\w_]+)\\s*\\{\\s*get\\s*=>\\s*([\\w_]+);\\s*set\\s*=>\\s*SetProperty\\(ref\\s+([\\w_]+),\\s*value\\);\\s*\\}", RegexOptions.Singleline);
-            if (exprMatch.Success)
-            {
-                var type = exprMatch.Groups[2].Value;
-                var propertyName = exprMatch.Groups[3].Value;
-                var field = exprMatch.Groups[4].Value;
-                var dependentProperties = new List<string>();
-                return new PropertyInfo { Type = type, FieldName = field, PropertyName = propertyName, Kind = "FullWithBacking", DependentProperties = dependentProperties };
-            }
-
-            // 4. General full property (fallback, no backing field extraction)
+            // 5. General full property (fallback, no backing field extraction)
             var fullMatch = Regex.Match(text, "(public|private|protected|internal)\\s+([\\w<>,\\[\\]\\.\\?]+)\\s+([\\w_]+)\\s*\\{[^}]*get[^}]*;?[^}]*set\\s*\\{([^}]*)\\}[^}]*\\}", RegexOptions.Singleline);
             if (fullMatch.Success)
             {
@@ -135,6 +150,17 @@ namespace SsRefactor
                 return new PropertyInfo { Type = type, PropertyName = propertyName, Kind = "Full", DependentProperties = dependentProperties };
             }
 
+            return null;
+        }
+
+        // Extract initial value from backing field declaration in the original text
+        private static string ExtractInitialValueFromField(string text, string fieldName)
+        {
+            var match = Regex.Match(text, $@"{Regex.Escape(fieldName)}\s*=\s*(.*?);", RegexOptions.Singleline);
+            if (match.Success)
+            {
+                return match.Groups[1].Value.Trim();
+            }
             return null;
         }
 

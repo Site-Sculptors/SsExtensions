@@ -224,6 +224,15 @@ namespace SsRefactor
                 var skippedProperties = new List<string>();
                 foreach (var block in blocks)
                 {
+                    // Check if block is fully commented out
+                    var blockNoWhitespace = block.Replace("\r", "").Replace("\n", "").Trim();
+                    bool isSingleLineComment = blockNoWhitespace.StartsWith("//");
+                    bool isMultiLineComment = blockNoWhitespace.StartsWith("/*") && blockNoWhitespace.EndsWith("*/");
+                    if (isSingleLineComment || isMultiLineComment)
+                    {
+                        skippedProperties.Add(block);
+                        continue;
+                    }
                     var propInfo = PropertyRegexHelper.MatchProperty(block);
                     if (propInfo != null && propInfo.NoMatchReason == null)
                     {
@@ -241,21 +250,36 @@ namespace SsRefactor
                     }
                     else
                     {
-                        // Add to skipped list for warning
+                        // Always add the original block to skipped list
                         skippedProperties.Add(block);
                     }
                 }
+                // If no blocks were detected, preserve the original selection as skipped
+                if (blocks.Count == 0 && !string.IsNullOrWhiteSpace(selectedText))
+                {
+                    skippedProperties.Add(selectedText);
+                }
                 string finalOutput = string.Join("\n\n", convertedFields);
-                if (!string.IsNullOrWhiteSpace(finalOutput))
+                string skippedOutput = "";
+                if (skippedProperties.Count > 0)
+                {
+                    skippedOutput =
+                        "\n\n// =======================================================\n" +
+                        "// === The following properties could NOT be converted ===\n" +
+                        "// =======================================================\n" +
+                        string.Join("\n\n", skippedProperties);
+                }
+                string combinedOutput = string.IsNullOrWhiteSpace(finalOutput) ? skippedOutput : (finalOutput + skippedOutput);
+                if (!string.IsNullOrWhiteSpace(combinedOutput))
                 {
                     sel.Delete();
-                    sel.Insert(finalOutput);
+                    sel.Insert(combinedOutput);
                 }
                 if (skippedProperties.Count > 0)
                 {
                     VsShellUtilities.ShowMessageBox(
                         this.package,
-                        $"Some properties could not be converted to [ObservableProperty] fields. Please review them manually.\n\nSkipped properties:\n{string.Join("\n---\n", skippedProperties)}",
+                        $"Some properties could not be converted to [ObservableProperty] fields. Please review them manually. They have been reinserted at the end of the conversion.",
                         "SsRefactor",
                         OLEMSGICON.OLEMSGICON_WARNING,
                         OLEMSGBUTTON.OLEMSGBUTTON_OK,

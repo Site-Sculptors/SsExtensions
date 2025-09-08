@@ -1,5 +1,12 @@
 # SS Refactor Release Notes
 
+## v1.2.0
+- Improved property conversion robustness: all blocks are processed and preserved.
+- Skipped properties are now reinserted with a prominent comment block.
+- Properties that are commented out or unrecognized are never lost.
+- Regex improvements for backing fields with/without initial values and for block/expression-bodied accessors.
+- Enhanced user guidance and error handling.
+
 ## v1.1.2
 - Added support for Prism-style and SetProperty properties with nullable types (e.g., bool?, int?, etc.).
 - All property detection patterns now support nullable types.

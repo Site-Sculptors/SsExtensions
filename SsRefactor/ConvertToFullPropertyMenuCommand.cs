@@ -82,8 +82,18 @@ namespace SsRefactor
                 string selectedText = sel.Text.Trim();
                 var blocks = PropertyRegexHelper.ExtractPropertyBlocks(selectedText);
                 var convertedFields = new List<string>();
+                var skippedProperties = new List<string>();
                 foreach (var block in blocks)
                 {
+                    // Check if block is fully commented out
+                    var blockNoWhitespace = block.Replace("\r", "").Replace("\n", "").Trim();
+                    bool isSingleLineComment = blockNoWhitespace.StartsWith("//");
+                    bool isMultiLineComment = blockNoWhitespace.StartsWith("/*") && blockNoWhitespace.EndsWith("*/");
+                    if (isSingleLineComment || isMultiLineComment)
+                    {
+                        skippedProperties.Add(block);
+                        continue;
+                    }
                     var propInfo = PropertyRegexHelper.MatchProperty(block);
                     if (propInfo != null && propInfo.NoMatchReason == null)
                     {
@@ -102,12 +112,27 @@ namespace SsRefactor
                         var indentedOutput = string.Join("\n", output.Split('\n')).Replace("\n", "\n" + indent);
                         convertedFields.Add(indent + indentedOutput);
                     }
+                    else
+                    {
+                        skippedProperties.Add(block);
+                    }
+                }
+                // If no blocks were detected, preserve the original selection as skipped
+                if (blocks.Count == 0 && !string.IsNullOrWhiteSpace(selectedText))
+                {
+                    skippedProperties.Add(selectedText);
                 }
                 string finalOutput = string.Join("\n\n", convertedFields);
-                if (!string.IsNullOrWhiteSpace(finalOutput))
+                string skippedOutput = "";
+                if (skippedProperties.Count > 0)
+                {
+                    skippedOutput = "// The following properties couldn't be converted automatically:\n" + string.Join("\n\n", skippedProperties);
+                }
+                string combinedOutput = string.IsNullOrWhiteSpace(finalOutput) ? skippedOutput : (finalOutput + (string.IsNullOrWhiteSpace(skippedOutput) ? "" : "\n\n" + skippedOutput));
+                if (!string.IsNullOrWhiteSpace(combinedOutput))
                 {
                     sel.Delete();
-                    sel.Insert(finalOutput);
+                    sel.Insert(combinedOutput);
                 }
                 else
                 {
