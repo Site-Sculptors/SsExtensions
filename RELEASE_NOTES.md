@@ -1,6 +1,9 @@
 # SS Refactor Release Notes
 
 ## v1.2.0
+- Tested on and compatible with both Visual Studio 2022 and Visual Studio 2026.
+- 
+## v1.2.0
 - Improved property conversion robustness: all blocks are processed and preserved.
 - Skipped properties are now reinserted with a prominent comment block.
 - Properties that are commented out or unrecognized are never lost.

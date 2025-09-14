@@ -16,13 +16,14 @@
 - Checks for CommunityToolkit.Mvvm NuGet package and guides user to install if missing (with clipboard and NuGet UI support).
 - Ensures containing class is partial, with prompt to make it partial if needed.
 - Skips and warns about properties that cannot be safely converted.
-- Supports .NET Framework 4.7.2 and Visual Studio 2022 or later.
+- Supports .NET Framework 4.7.2 and .NET 6 or newer
+- Compatible with Visual Studio 2022 and Visual Studio 2026.
 
 ## Getting Started
 
 1. **Install the Extension**
    - Download and install the VSIX from the [Releases page](https://github.com/Site-Sculptors/SsExtensions/releases) or from the Visual Studio Marketplace.
-2. **Open Your C# Project** in Visual Studio 2022 (v17.0 or later).
+2. **Open Your C# Project** in Visual Studio 2022 (v17.0 or later) or Visual Studio 2026.
 3. **Highlight** one or more properties in your C# code (auto, full, or Prism-style).
 4. **Right-click** to open the context menu.
 5. Select one of the conversion commands:
