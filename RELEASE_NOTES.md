@@ -1,6 +1,6 @@
 # SS Refactor Release Notes
 
-## v1.2.0
+## v1.2.2
 - Tested on and compatible with both Visual Studio 2022 and Visual Studio 2026.
 - 
 ## v1.2.0
